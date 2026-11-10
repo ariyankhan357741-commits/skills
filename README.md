@@ -1,3 +1,57 @@
+
+const API_URL = "https://api.twelvedata.com/time_series";
+
+function doGet(e) {
+  const props = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty("TWELVE_DATA_API_KEY");
+
+  if (!apiKey) {
+    return output({error: "API Key সেট করা হয়নি"});
+  }
+
+  const symbol = (e.parameter.symbol || "EUR/USD").trim();
+  const interval = e.parameter.interval || "1min";
+
+  if (!/^[A-Z0-9/._-]{3,20}$/i.test(symbol)) {
+    return output({error: "Invalid symbol"});
+  }
+
+  if (!["1min", "5min", "15min"].includes(interval)) {
+    return output({error: "Invalid interval"});
+  }
+
+  const url = API_URL +
+    "?symbol=" + encodeURIComponent(symbol) +
+    "&interval=" + encodeURIComponent(interval) +
+    "&outputsize=100&apikey=" + encodeURIComponent(apiKey);
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true
+    });
+
+    const data = JSON.parse(response.getContentText());
+
+    if (data.status === "error" || data.code) {
+      return output({error: data.message || "Data unavailable"});
+    }
+
+    return output({
+      symbol: data.meta.symbol,
+      interval: data.meta.interval,
+      candles: data.values || []
+    });
+
+  } catch (err) {
+    return output({error: "Data request failed"});
+  }
+}
+
+function output(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 # Magic Hour AI media skills
 
 Animate your photo. Put yourself in a scene. Give your character a performance. Turn an impossible idea into a video. Tell your AI agent what you want; these skills guide the creative decisions, run [Magic Hour's creation MCP](https://github.com/magichourhq/magic-hour-mcp) or [API](https://docs.magichour.ai/api-reference), inspect the result and save files you can reuse.
